@@ -11,5 +11,7 @@ if(false) {
     $session = new SessionHelper(); 
     $text = new TextHelper(); 
     $time = new TimeHelper(); 
+    
+    
 } 
 ?> 
