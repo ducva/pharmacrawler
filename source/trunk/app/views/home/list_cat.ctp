@@ -9,9 +9,9 @@
 	<?php foreach ($cats as $cat) {?>
 		<tr>
 		<td><?php echo ++$i;?></td>
-		<td><?php echo $cat['Name']?></td>
+		<td><?php echo $cat['Category']['Name']?></td>
 		<td>
-			<?php echo $html->link(__('Get Products', true), '/home/get_products/'.$cat['Link']);?>
+			<?php echo $html->link(__('Get Products', true), '/home/get_products/'.$cat['Category']['Id']);?>
 		</td>
 		
 		</tr>

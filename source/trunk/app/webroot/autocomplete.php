@@ -11,7 +11,9 @@ if(false) {
     $session = new SessionHelper(); 
     $text = new TextHelper(); 
     $time = new TimeHelper(); 
-    
+  	$app = new App();
+  	$model = new Model();
+  	$Category = new AppModel();  
     
 } 
 ?> 
