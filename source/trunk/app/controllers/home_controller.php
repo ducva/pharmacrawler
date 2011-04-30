@@ -1,7 +1,7 @@
 <?php
 class HomeController extends AppController {
 	public $name = "Home";
-	public $uses = array('Category');
+	public $uses = array('Category', 'Product');
 	
 	function __construct(){
 		parent::__construct();
@@ -11,11 +11,50 @@ class HomeController extends AppController {
 	public function index(){
 		if($this->RequestHandler->isPost()){
 			if(strtolower($this->params['form']['task']) == 'submit'){
-				$this->_processUrl($this->data['url']);
+				$this->_processUrl($this->data['Category']['url']);
 			}
 		}
 	}
-
+	function _processUrl($url){
+		$html = new simple_html_dom();
+		$content = file_get_contents($url);
+		//$content = tidy_repair_string($content, array());
+		$html->load($content);
+		$this->debug('loaded content');
+		// Menu left
+		$list_cats = $html->find('ul#nav li');
+		$arrCategory = array();
+		$this->debug('Found category:' . count($list_cats));
+		foreach($list_cats as $cat_element){
+			$cat_link = trim($cat_element->find('a', 0)->href);
+			$img = $cat_element->find('a img', 0);	
+			$cat_name = trim(str_replace($img->outertext,'', $cat_element->find('a', 0)->innertext));
+			$cat_name = trim(str_replace('&nbsp;', '', $cat_name));
+			$cat_model = array(
+									'Name'=>$cat_name,
+									'Link'=> $cat_link,
+									'Position' => 0
+									);
+			$this->Category->create();
+			$this->Category->set($cat_model);
+			$this->Category->save();
+			$this->debug('saved category:'. $cat_name);
+		}
+		$html->clear();
+		unset($html);
+		
+		//$this->set('cats', $arrCategory);
+		$this->redirect('list_cat');
+	}
+	
+	function list_cat(){
+		
+		
+		$list_cats = $this->Category->find('all', array('conditions'=>array('Category.Link <>'=>'')));
+		//dump($list_cats);die;
+		$this->set('cats', $list_cats);
+				
+	}
 	public function get_products($cat_id){
 		$cat_model = $this->Category->findById($cat_id);
 		$cat_link = Configure::read('target_url') . $cat_model['Category']['Link'];
@@ -32,8 +71,20 @@ class HomeController extends AppController {
 		}
 		
 		//dump($product_links);die;
+		
+		$products = array();
 		foreach($product_links as $link){
-			$this->_getProductDetail($link);die;
+			$product = $this->_getProductDetail($link);
+			if(isset($product)){
+				$products[] = $product;
+			}
+		}
+		foreach($products as $product){
+			
+			$product['categoryId']= $cat_id;
+			$this->Product->create();
+			$this->Product->set($product);
+			$this->Product->save();
 		}
 	}
 	
@@ -43,58 +94,40 @@ class HomeController extends AppController {
 		$content = file_get_contents($product_link);
 		//$content = tidy_repair_string($content, array());
 		$html->load($content);
-		
+		if(!isset($html)){
+			return null;
+		}
 		$link_image = $html->find('a#linkimagesshow',0)->href;
 		$info = $html->find('table#ctl00_ContentPlaceHolder1_ctl01_reproductdetails tbody tr td', 0);
-		
 		$product_name = $info->find('span#ptitle',0)->innertext;
+		$product_name = str_replace("&nbsp;", '', $product_name);
 		
-		$product_info = $info->find('div div', 1);
-		$product_code = $product_info->find('div[style]', 1);
-		$product_price = $product_info->find('div[style]', 2);
-		$product_company = $product_info->find('div[style]', 3);
-		dump($product_info->html);
+		$product_price = $info->find('span[style*=color: Black]', 2);
+		$price = $product_price->next_sibling()->first_child()->innertext;
+		$product_company = $info->find('div#pdetail', 0);
+		$test = $product_company->children(0);
+		$company = trim(str_replace($test->outertext, '', $product_company->innertext));
 		
-	}
-	function _processUrl($url){
-		
-		$html = new simple_html_dom();
-		$content = file_get_contents($url);
-		//$content = tidy_repair_string($content, array());
-		$html->load($content);
-		
-		// Menu left
-		$list_cats = $html->find('ul#nav li');
-		$arrCategory = array();
-		App::Import('Model', 'Category');
-		
-		$strUtil = new String();
-		foreach($list_cats as $cat_element){
-			$cat_link = trim($cat_element->find('a', 0)->href);
-			$img = $cat_element->find('a img', 0);	
-			$cat_name = $strUtil->cleanInsert(trim(str_replace($img->outertext,'', $cat_element->find('a', 0)->innertext)), array('clean'=>'true'));
-			$cat_model = array(
-									'Name'=>$cat_name,
-									'Link'=> $cat_link,
-									'Position' => 0
-									);
-			$category = new Category();
-			$category->set($cat_model);
-			$category->save();
+		$product_code = $info->find('span[style*=color: Black]', 1)->parent();
+		$code = '';
+		if(isset($product_code)){
+			$test = $product_code->children(0);
+			$code = trim(str_replace($test->outertext, '', $product_code->innertext));
 		}
-		$html->clear();
-		unset($html);
 		
-		//$this->set('cats', $arrCategory);
-		$this->redirect('list_cat');
+		$detail = $info->find('div[style*=width:510px]',0)->innertext;
+		$product_data = array(
+			'Name'=> $product_name,
+			'Code'=> $code,
+			'Price'=>$price,
+			'PriceQTM'=>$price,
+			'providerId'=>1,
+			'Status'=>1,
+			'View'=>0,
+			'Detail'=>$detail,
+		);
+		return $product_data;
 	}
 	
-	function list_cat(){
-		$this->loadModel('Category');
-		
-		$list_cats = $this->Category->find('all', array('conditions'=>array('Category.Link <>'=>'')));
-		//dump($list_cats);die;
-		$this->set('cats', $list_cats);
-				
-	}
+	
 }

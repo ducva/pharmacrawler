@@ -38,4 +38,8 @@ class AppController extends Controller {
 		parent::__construct();
 		App::Import('Vendor', 'dbug');
 	}
+	
+	function debug($mes){
+		$this->log($mes, 'debug');
+	}
 }
