@@ -4,5 +4,7 @@ class Product extends AppModel {
 	var $useTable = 'product';
 	var $primaryKey = 'Id';
 	var $displayField = 'Name';
+	var $allowDuplicateName = false;
+	var $nameFieldName = 'Name';
 }
 ?>

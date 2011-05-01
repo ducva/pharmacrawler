@@ -2,7 +2,7 @@
 class HomeController extends AppController {
 	public $name = "Home";
 	public $uses = array('Category', 'Product');
-	
+	var $helpers = array('Text');
 	function __construct(){
 		parent::__construct();
 		App::Import('Vendor', 'simple_html_dom');
@@ -97,17 +97,24 @@ class HomeController extends AppController {
 		if(!isset($html)){
 			return null;
 		}
-		$link_image = $html->find('a#linkimagesshow',0)->href;
 		$info = $html->find('table#ctl00_ContentPlaceHolder1_ctl01_reproductdetails tbody tr td', 0);
+		if(!isset($info)){
+			return null;
+		}
+		// Product Name
 		$product_name = $info->find('span#ptitle',0)->innertext;
 		$product_name = str_replace("&nbsp;", '', $product_name);
 		
+		// Product Price
 		$product_price = $info->find('span[style*=color: Black]', 2);
-		$price = $product_price->next_sibling()->first_child()->innertext;
+		$price = trim(str_replace("&nbsp;", '', $product_price->next_sibling()->first_child()->innertext));
+		
+		// Product company
 		$product_company = $info->find('div#pdetail', 0);
 		$test = $product_company->children(0);
 		$company = trim(str_replace($test->outertext, '', $product_company->innertext));
 		
+		// product code
 		$product_code = $info->find('span[style*=color: Black]', 1)->parent();
 		$code = '';
 		if(isset($product_code)){
@@ -115,7 +122,13 @@ class HomeController extends AppController {
 			$code = trim(str_replace($test->outertext, '', $product_code->innertext));
 		}
 		
+		// product detail
 		$detail = $info->find('div[style*=width:510px]',0)->innertext;
+		
+		// Product Image
+		$image = $html->find('img#imagesplacedisplay',0)->src;
+		$image_path = $this->_getImage($image);
+		
 		$product_data = array(
 			'Name'=> $product_name,
 			'Code'=> $code,
@@ -125,8 +138,21 @@ class HomeController extends AppController {
 			'Status'=>1,
 			'View'=>0,
 			'Detail'=>$detail,
+			'Description'=>$this->Text->truncate($detail, 100),
+			'Image'=>$image_path
 		);
 		return $product_data;
+	}
+	
+	function _getImage($url){
+		$full_path = Configure::read('target_url').$url;
+		
+		$content = file_get_contents($full_path);
+		$file_name = basename($full_path);
+		$file = new File(Configure::read('image_path').$file_name, true, 'w');
+		$file->write($content,'w', true);
+		$file->close();
+		return $file_name;
 	}
 	
 	

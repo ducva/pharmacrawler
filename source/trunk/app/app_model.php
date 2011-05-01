@@ -31,4 +31,29 @@
  * @subpackage    cake.app
  */
 class AppModel extends Model {
+	var $allowDuplicateName = true;
+	var $nameFieldName = 'Name';
+	function beforeSave($options){
+		if(!$this->allowDuplicateName){
+			$this->log('before save','debug');
+			// check exist name
+			$test = $this->find('all', array('conditions'=>array($this->nameFieldName =>$this->data[$this->name][$this->nameFieldName])));
+			if(count($test) >=2){
+				$this->log('exists 2 rows','debug');
+				return false;
+			}
+			else if(count($test) >0){
+				if($this->data[$this->name][$this->primaryKey] > 0){ // Update case
+					$this->log('Update case','debug');
+					if($test[0]['Id'] == $this->data[$this->name][$this->primaryKey]){
+						$this->log('OK');
+						return true;
+					}
+				}
+				return false;
+			}
+			$this->log('save', 'debug');
+		}
+		return parent::beforeSave($options);
+	}
 }
